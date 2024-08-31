@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:audioplayers/audioplayers.dart';
 
-class FlashcardPage extends StatelessWidget {
+class FlashcardPage extends StatefulWidget {
   final String category;
   final List<Map<String, String>> items;
   final int index;
@@ -13,20 +13,39 @@ class FlashcardPage extends StatelessWidget {
     required this.index,
   });
 
+  @override
+  _FlashcardPageState createState() => _FlashcardPageState();
+}
+
+class _FlashcardPageState extends State<FlashcardPage> {
+  late AudioPlayer _player;
+
+  @override
+  void initState() {
+    super.initState();
+    _player = AudioPlayer();
+  }
+
+  @override
+  void dispose() {
+    _player.dispose();  // Dispose of the player when the widget is removed
+    super.dispose();
+  }
+
   void playSound(String soundPath) async {
-    final player = AudioPlayer();
-    await player.play(AssetSource(soundPath));
+    await _player.stop();  // Stop any sound that's currently playing
+    await _player.play(AssetSource(soundPath));  // Play the new sound
   }
 
   @override
   Widget build(BuildContext context) {
-    String imagePath = items[index]['image']!;
-    String soundPath = items[index]['sound']!;
-    String itemName = items[index]['name']!;
+    String imagePath = widget.items[widget.index]['image']!;
+    String soundPath = widget.items[widget.index]['sound']!.replaceFirst('assets/', '');
+    String itemName = widget.items[widget.index]['name']!;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(category),
+        title: Text(widget.category),
         backgroundColor: Colors.lightBlueAccent,
       ),
       body: Center(
@@ -50,16 +69,17 @@ class FlashcardPage extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                if (index > 0)
+                if (widget.index > 0)
                   ElevatedButton(
                     onPressed: () {
+                      _player.stop();  // Stop sound when navigating away
                       Navigator.pushReplacement(
                         context,
                         MaterialPageRoute(
                           builder: (context) => FlashcardPage(
-                            category: category,
-                            items: items,
-                            index: index - 1,
+                            category: widget.category,
+                            items: widget.items,
+                            index: widget.index - 1,
                           ),
                         ),
                       );
@@ -74,16 +94,17 @@ class FlashcardPage extends StatelessWidget {
                   },
                   child: const Text('Play'),
                 ),
-                if (index < items.length - 1)
+                if (widget.index < widget.items.length - 1)
                   ElevatedButton(
                     onPressed: () {
+                      _player.stop();  // Stop sound when navigating away
                       Navigator.pushReplacement(
                         context,
                         MaterialPageRoute(
                           builder: (context) => FlashcardPage(
-                            category: category,
-                            items: items,
-                            index: index + 1,
+                            category: widget.category,
+                            items: widget.items,
+                            index: widget.index + 1,
                           ),
                         ),
                       );
