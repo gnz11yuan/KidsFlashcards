@@ -95,7 +95,7 @@ class ImageGridScreen extends StatelessWidget {
                   builder: (context) => FlashcardPage(
                     category: category,
                     items: categories[category]!,
-                    index: 0,
+                    // index: 0,
                   ),
                 ),
               );
