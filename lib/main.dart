@@ -1,5 +1,6 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'flashcard_page.dart';
+import 'flashcard_page.dart';  // Ensure the FlashcardPage is correctly imported
 
 void main() {
   runApp(const MyApp());
@@ -31,7 +32,9 @@ class MyHomePage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text(title),
-        backgroundColor: Colors.lightBlueAccent,
+        backgroundColor: CupertinoColors.activeBlue,  // Match the AppBar color to the buttons
+        titleTextStyle: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+        iconTheme: const IconThemeData(color: Colors.white),  // Set icon color to white
       ),
       body: const Padding(
         padding: EdgeInsets.only(top: 16.0),
@@ -95,7 +98,7 @@ class ImageGridScreen extends StatelessWidget {
                   builder: (context) => FlashcardPage(
                     category: category,
                     items: categories[category]!,
-                    // index: 0,
+                    initialIndex: 0,  // Corrected to match the constructor in FlashcardPage
                   ),
                 ),
               );
