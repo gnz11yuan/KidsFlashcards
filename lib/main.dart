@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'flashcard_page.dart';
 
@@ -31,7 +32,7 @@ class MyHomePage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text(title),
-        backgroundColor: Colors.lightBlueAccent,
+        backgroundColor: CupertinoColors.activeBlue,
         elevation: 0,
         titleTextStyle: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
       ),
