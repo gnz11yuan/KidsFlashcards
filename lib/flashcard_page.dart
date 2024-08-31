@@ -23,6 +23,7 @@ class FlashcardPage extends StatefulWidget {
 class FlashcardPageState extends State<FlashcardPage> {
   late AudioPlayer _player;
   late int _currentIndex;
+  bool isPlaying = false;  // Track whether the audio is playing
   Color? dominantColor;
   Color textColor = Colors.white;  // Default text color
 
@@ -40,9 +41,15 @@ class FlashcardPageState extends State<FlashcardPage> {
     super.dispose();
   }
 
-  void playSound(String soundPath) async {
-    await _player.stop();
-    await _player.play(AssetSource(soundPath));
+  void playPauseSound(String soundPath) async {
+    if (isPlaying) {
+      await _player.pause();
+    } else {
+      await _player.play(AssetSource(soundPath));
+    }
+    setState(() {
+      isPlaying = !isPlaying;  // Toggle play/pause state
+    });
   }
 
   Future<void> _updatePaletteColor() async {
@@ -59,22 +66,24 @@ class FlashcardPageState extends State<FlashcardPage> {
 
   void _showNextFlashcard() async {
     await _player.stop();
-    if (_currentIndex < widget.items.length - 1) {
-      setState(() {
+    setState(() {
+      isPlaying = false;  // Reset the play state when moving to next flashcard
+      if (_currentIndex < widget.items.length - 1) {
         _currentIndex++;
         _updatePaletteColor();
-      });
-    }
+      }
+    });
   }
 
   void _showPreviousFlashcard() async {
     await _player.stop();
-    if (_currentIndex > 0) {
-      setState(() {
+    setState(() {
+      isPlaying = false;  // Reset the play state when moving to previous flashcard
+      if (_currentIndex > 0) {
         _currentIndex--;
         _updatePaletteColor();
-      });
-    }
+      }
+    });
   }
 
   @override
@@ -90,91 +99,137 @@ class FlashcardPageState extends State<FlashcardPage> {
         titleTextStyle: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
         iconTheme: const IconThemeData(color: Colors.white),  // Set icon color to white
       ),
-      body: Stack(
-        children: [
-          // Blurry background with dominant color
-          if (dominantColor != null)
-            Container(
-              decoration: BoxDecoration(
-                image: DecorationImage(
-                  image: AssetImage(imagePath),
-                  fit: BoxFit.cover,
-                ),
-              ),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
-                child: Container(
-                  color: dominantColor!.withOpacity(0.5),
-                ),
-              ),
-            ),
-          Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  itemName,
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: textColor,  // Use dynamically determined text color
+      body: GestureDetector(
+        onHorizontalDragEnd: (details) {
+          if (details.primaryVelocity! < 0) {
+            // Swiped left, show next flashcard
+            if (_currentIndex < widget.items.length - 1) {
+              _showNextFlashcard();
+            }
+          } else if (details.primaryVelocity! > 0) {
+            // Swiped right, show previous flashcard
+            if (_currentIndex > 0) {
+              _showPreviousFlashcard();
+            }
+          }
+        },
+        child: Stack(
+          children: [
+            // Blurry background with dominant color
+            if (dominantColor != null)
+              Container(
+                decoration: BoxDecoration(
+                  image: DecorationImage(
+                    image: AssetImage(imagePath),
+                    fit: BoxFit.cover,
                   ),
                 ),
-                const SizedBox(height: 10),
-                InkWell(
-                  onTap: () {
-                    playSound(soundPath);
-                  },
-                  splashColor: Colors.transparent,
-                  highlightColor: Colors.transparent,
-                  child: SizedBox(
-                    width: 500,
-                    height: 500,
-                    child: Image.asset(
-                      imagePath,
-                      fit: BoxFit.contain,
-                    ),
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+                  child: Container(
+                    color: dominantColor!.withOpacity(0.3),  // Reduced opacity for a more luminous effect
                   ),
                 ),
-                const SizedBox(height: 20),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    if (_currentIndex > 0)
-                      CupertinoButton(
-                        padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 24.0),
-                        color: CupertinoColors.activeBlue,
-                        borderRadius: BorderRadius.circular(8.0),
-                        onPressed: _showPreviousFlashcard,
-                        child: const Text('Previous'),
-                      )
-                    else
-                      const SizedBox(width: 120), // Placeholder for spacing
-                    CupertinoButton(
-                      padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 24.0),
-                      color: CupertinoColors.activeBlue,
-                      borderRadius: BorderRadius.circular(8.0),
-                      onPressed: () {
-                        playSound(soundPath);
-                      },
-                      child: const Text('Play'),
+              ),
+            Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    itemName,
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: textColor,  // Use dynamically determined text color
                     ),
-                    if (_currentIndex < widget.items.length - 1)
-                      CupertinoButton(
-                        padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 24.0),
-                        color: CupertinoColors.activeBlue,
-                        borderRadius: BorderRadius.circular(8.0),
-                        onPressed: _showNextFlashcard,
-                        child: const Text('Next'),
-                      )
-                    else
-                      const SizedBox(width: 120), // Placeholder for spacing
-                  ],
-                ),
-              ],
+                  ),
+                  const SizedBox(height: 10),
+                  InkWell(
+                    onTap: () {
+                      playPauseSound(soundPath);
+                    },
+                    splashColor: Colors.transparent,
+                    highlightColor: Colors.transparent,
+                    child: SizedBox(
+                      width: 500,
+                      height: 500,
+                      child: Image.asset(
+                        imagePath,
+                        fit: BoxFit.contain,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Stack(
+                    children: [
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: _currentIndex > 0
+                            ? CupertinoButton(
+                                padding: const EdgeInsets.all(20.0),  // Increase padding to match play button size
+                                color: CupertinoColors.activeBlue,
+                                borderRadius: BorderRadius.circular(50.0),  // Rounded button like the play button
+                                onPressed: _showPreviousFlashcard,
+                                child: const Icon(
+                                  CupertinoIcons.back,  // iOS-style back arrow for Previous
+                                  color: Colors.white,
+                                  size: 40,  // Increase icon size to match play button
+                                ),
+                              )
+                            : const SizedBox(width: 60), // Placeholder when button is hidden
+                      ),
+                      Align(
+                        alignment: Alignment.center,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.3),  // 30% transparency black background
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.white.withOpacity(0.6),  // White glow effect
+                                spreadRadius: 3,  // Updated spread radius
+                                blurRadius: 1,    // Updated blur radius
+                              ),
+                            ],
+                          ),
+                          child: CupertinoButton(
+                            padding: const EdgeInsets.all(20.0),  // Increase padding for a larger button
+                            color: Colors.transparent,  // Make button itself transparent to use container's color
+                            borderRadius: BorderRadius.circular(50.0),  // Rounded circular button
+                            onPressed: () {
+                              playPauseSound(soundPath);
+                            },
+                            child: Icon(
+                              isPlaying ? CupertinoIcons.pause : CupertinoIcons.play_arrow_solid,
+                              color: Colors.white,
+                              size: 40,  // Increase icon size
+                            ),
+                          ),
+                        ),
+                      ),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: _currentIndex < widget.items.length - 1
+                            ? CupertinoButton(
+                                padding: const EdgeInsets.all(20.0),  // Increase padding to match play button size
+                                color: CupertinoColors.activeBlue,
+                                borderRadius: BorderRadius.circular(50.0),  // Rounded button like the play button
+                                onPressed: _showNextFlashcard,
+                                child: const Icon(
+                                  CupertinoIcons.forward,  // iOS-style forward arrow for Next
+                                  color: Colors.white,
+                                  size: 40,  // Increase icon size to match play button
+                                ),
+                              )
+                            : const SizedBox(width: 60), // Placeholder when button is hidden
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
