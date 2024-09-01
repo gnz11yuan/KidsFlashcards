@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'flashcard_page.dart';
+import 'settings_page.dart'; // Import the settings page
 
 void main() {
   runApp(const MyApp());
@@ -35,6 +36,30 @@ class MyHomePage extends StatelessWidget {
         backgroundColor: CupertinoColors.activeBlue,
         elevation: 0,
         titleTextStyle: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
+        actions: [
+          PopupMenuButton<String>(
+            icon: const Icon(
+              Icons.more_vert,
+              color: Colors.white, // Make the three-dot menu icon white
+            ),
+            onSelected: (String value) {
+              if (value == 'Settings') {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const SettingsPage()),
+                );
+              }
+            },
+            itemBuilder: (BuildContext context) {
+              return {'Settings'}.map((String choice) {
+                return PopupMenuItem<String>(
+                  value: choice,
+                  child: Text(choice),
+                );
+              }).toList();
+            },
+          ),
+        ],
       ),
       body: Container(
         color: Colors.white,  // Set the background color to white
@@ -114,6 +139,7 @@ final Map<String, List<Map<String, String>>> categories = {
     {'name': 'Cat', 'image': 'assets/images/cat.webp', 'sound': 'assets/sounds/cat.wav'},
     {'name': 'Dog', 'image': 'assets/images/dog.webp', 'sound': 'assets/sounds/dog.wav'},
     {'name': 'Rabbit', 'image': 'assets/images/rabbit.webp', 'sound': 'assets/sounds/rabbit.wav'},
+    {'name': 'Parrot', 'image': 'assets/images/parrot.webp', 'sound': 'assets/sounds/parrot.wav'},
   ],
   'Wild Animals': [
     {'name': 'Lion', 'image': 'assets/images/lion.webp', 'sound': 'assets/sounds/lion.wav'},
@@ -129,6 +155,7 @@ final Map<String, List<Map<String, String>>> categories = {
     {'name': 'Cat', 'image': 'assets/gifs/cat.gif', 'sound': 'assets/sounds/cat.wav'},
     {'name': 'Dog', 'image': 'assets/gifs/dog.gif', 'sound': 'assets/sounds/dog.wav'},
     {'name': 'Rabbit', 'image': 'assets/gifs/rabbit.gif', 'sound': 'assets/sounds/rabbit.wav'},
+    {'name': 'Parrot', 'image': 'assets/gifs/parrot.gif', 'sound': 'assets/sounds/parrot.wav'},
   ],
 };
 

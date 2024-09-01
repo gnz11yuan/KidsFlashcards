@@ -38,7 +38,7 @@ dependencies:
   http_parser: 4.0.2
   leak_tracker: ^10.0.4
   leak_tracker_flutter_testing: ^3.0.3
-  material_color_utilities: ^0.8.0
+  # material_color_utilities: ^0.8.0
   meta: ^1.12.0
   path_provider_android: ^2.2.7
   path_provider_windows: ^2.3.0
@@ -47,6 +47,7 @@ dependencies:
   uuid: ^4.4.2
   vm_service: ^14.2.1
   palette_generator: ^0.3.0
+  shared_preferences: ^2.0.13
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
@@ -112,6 +113,7 @@ flutter:
     - assets/images/cat.webp
     - assets/images/dog.webp
     - assets/images/rabbit.webp
+    - assets/images/parrot.webp
     - assets/images/lion.webp
     - assets/images/elephant.webp
     - assets/images/tiger.webp
@@ -121,9 +123,11 @@ flutter:
     - assets/gifs/cat.gif
     - assets/gifs/dog.gif
     - assets/gifs/rabbit.gif
+    - assets/gifs/parrot.gif
     - assets/sounds/cat.wav
     - assets/sounds/dog.wav
     - assets/sounds/rabbit.wav
+    - assets/sounds/parrot.wav
     - assets/sounds/lion.wav
     - assets/sounds/elephant.wav
     - assets/sounds/tiger.wav

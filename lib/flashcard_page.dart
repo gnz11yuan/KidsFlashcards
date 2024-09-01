@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:palette_generator/palette_generator.dart';
 import 'dart:ui';  // Import this for ImageFilter
+import 'package:shared_preferences/shared_preferences.dart';
 
 class FlashcardPage extends StatefulWidget {
   final String category;
@@ -24,6 +25,8 @@ class FlashcardPageState extends State<FlashcardPage> {
   late AudioPlayer _player;
   late int _currentIndex;
   bool isPlaying = false;  // Track whether the audio is playing
+  bool isRandomMode = false;  // Track whether random mode is enabled
+  bool _isAudioAutoPlay = false;  // Track auto-play setting
   Color? dominantColor;
   Color textColor = Colors.white;  // Default text color
 
@@ -32,7 +35,13 @@ class FlashcardPageState extends State<FlashcardPage> {
     super.initState();
     _player = AudioPlayer();
     _currentIndex = widget.initialIndex;
+    _loadSettings();
     _updatePaletteColor();
+    _player.onPlayerComplete.listen((event) {
+      setState(() {
+        isPlaying = false;  // Reset the play state when the audio finishes
+      });
+    });
   }
 
   @override
@@ -41,15 +50,32 @@ class FlashcardPageState extends State<FlashcardPage> {
     super.dispose();
   }
 
-  void playPauseSound(String soundPath) async {
-    if (isPlaying) {
-      await _player.pause();
-    } else {
-      await _player.play(AssetSource(soundPath));
-    }
+  _loadSettings() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
     setState(() {
-      isPlaying = !isPlaying;  // Toggle play/pause state
+      _isAudioAutoPlay = (prefs.getBool('isAudioAutoPlay') ?? false);
     });
+    if (_isAudioAutoPlay) {
+      playSound(widget.items[_currentIndex]['sound']!.replaceFirst('assets/', ''));
+    }
+  }
+
+  void playSound(String soundPath) async {
+    await _player.play(AssetSource(soundPath));
+    setState(() {
+      isPlaying = true;
+    });
+  }
+
+  void pauseSound() async {
+    await _player.pause();
+    setState(() {
+      isPlaying = false;
+    });
+  }
+
+  void playPauseSound(String soundPath) {
+    isPlaying ? pauseSound() : playSound(soundPath);
   }
 
   Future<void> _updatePaletteColor() async {
@@ -68,22 +94,32 @@ class FlashcardPageState extends State<FlashcardPage> {
     await _player.stop();
     setState(() {
       isPlaying = false;  // Reset the play state when moving to next flashcard
-      if (_currentIndex < widget.items.length - 1) {
+      if (isRandomMode) {
+        _currentIndex = (List<int>.generate(widget.items.length, (index) => index)..shuffle()).first;
+      } else if (_currentIndex < widget.items.length - 1) {
         _currentIndex++;
-        _updatePaletteColor();
       }
+      _updatePaletteColor();
     });
+    if (_isAudioAutoPlay) {
+      playSound(widget.items[_currentIndex]['sound']!.replaceFirst('assets/', ''));
+    }
   }
 
   void _showPreviousFlashcard() async {
     await _player.stop();
     setState(() {
       isPlaying = false;  // Reset the play state when moving to previous flashcard
-      if (_currentIndex > 0) {
+      if (isRandomMode) {
+        _currentIndex = (List<int>.generate(widget.items.length, (index) => index)..shuffle()).first;
+      } else if (_currentIndex > 0) {
         _currentIndex--;
-        _updatePaletteColor();
       }
+      _updatePaletteColor();
     });
+    if (_isAudioAutoPlay) {
+      playSound(widget.items[_currentIndex]['sound']!.replaceFirst('assets/', ''));
+    }
   }
 
   @override
@@ -98,17 +134,32 @@ class FlashcardPageState extends State<FlashcardPage> {
         backgroundColor: CupertinoColors.activeBlue,  // Same color as the buttons
         titleTextStyle: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
         iconTheme: const IconThemeData(color: Colors.white),  // Set icon color to white
+        actions: [
+          CupertinoButton(
+            padding: const EdgeInsets.all(10.0),
+            onPressed: () {
+              setState(() {
+                isRandomMode = !isRandomMode;
+              });
+            },
+            child: Icon(
+              isRandomMode ? CupertinoIcons.shuffle_thick : CupertinoIcons.shuffle,
+              color: isRandomMode ? Colors.yellow : Colors.white,  // Change color when random mode is on
+              size: 28,
+            ),
+          ),
+        ],
       ),
       body: GestureDetector(
         onHorizontalDragEnd: (details) {
           if (details.primaryVelocity! < 0) {
             // Swiped left, show next flashcard
-            if (_currentIndex < widget.items.length - 1) {
+            if (_currentIndex < widget.items.length - 1 || isRandomMode) {
               _showNextFlashcard();
             }
           } else if (details.primaryVelocity! > 0) {
             // Swiped right, show previous flashcard
-            if (_currentIndex > 0) {
+            if (_currentIndex > 0 || isRandomMode) {
               _showPreviousFlashcard();
             }
           }
