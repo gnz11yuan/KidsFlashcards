@@ -11,6 +11,7 @@ class SettingsPage extends StatefulWidget {
 
 class _SettingsPageState extends State<SettingsPage> {
   bool _isAudioAutoPlay = false;
+  bool _isRandomizeFlashcards = false;
 
   @override
   void initState() {
@@ -22,6 +23,7 @@ class _SettingsPageState extends State<SettingsPage> {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     setState(() {
       _isAudioAutoPlay = (prefs.getBool('isAudioAutoPlay') ?? false);
+      _isRandomizeFlashcards = (prefs.getBool('isRandomizeFlashcards') ?? false);
     });
   }
 
@@ -33,25 +35,27 @@ class _SettingsPageState extends State<SettingsPage> {
     });
   }
 
+  _toggleRandomizeFlashcards(bool value) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _isRandomizeFlashcards = value;
+      prefs.setBool('isRandomizeFlashcards', _isRandomizeFlashcards);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Settings'),
         backgroundColor: CupertinoColors.activeBlue,
         elevation: 0,
-        titleTextStyle: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
+        iconTheme: const IconThemeData(color: Colors.white),  // Make the back icon white
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Settings',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
             SwitchListTile(
               title: const Text('Play Audio Automatically'),
               subtitle: const Text('Toggle whether the audio plays automatically when a flashcard is shown'),
@@ -59,7 +63,13 @@ class _SettingsPageState extends State<SettingsPage> {
               onChanged: _toggleAudioAutoPlay,
               activeColor: CupertinoColors.activeBlue,
             ),
-            // Add more settings options as needed
+            SwitchListTile(
+              title: const Text('Randomize Flashcards'),
+              subtitle: const Text('Toggle whether to randomize flashcards order'),
+              value: _isRandomizeFlashcards,
+              onChanged: _toggleRandomizeFlashcards,
+              activeColor: CupertinoColors.activeBlue,
+            ),
           ],
         ),
       ),

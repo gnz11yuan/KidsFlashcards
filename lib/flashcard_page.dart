@@ -4,6 +4,8 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:palette_generator/palette_generator.dart';
 import 'dart:ui';  // Import this for ImageFilter
 import 'package:shared_preferences/shared_preferences.dart';
+import 'settings_page.dart';  // Import the SettingsPage
+import 'dart:math'; // Import for shuffling the list
 
 class FlashcardPage extends StatefulWidget {
   final String category;
@@ -25,22 +27,34 @@ class FlashcardPageState extends State<FlashcardPage> {
   late AudioPlayer _player;
   late int _currentIndex;
   bool isPlaying = false;  // Track whether the audio is playing
-  bool isRandomMode = false;  // Track whether random mode is enabled
   bool _isAudioAutoPlay = false;  // Track auto-play setting
+  bool _isRandomizeFlashcards = false;  // Track randomize flashcards setting
   Color? dominantColor;
   Color textColor = Colors.white;  // Default text color
+  List<Map<String, String>> _shuffledItems = [];  // List to hold shuffled items
 
   @override
   void initState() {
     super.initState();
     _player = AudioPlayer();
-    _currentIndex = widget.initialIndex;
     _loadSettings();
-    _updatePaletteColor();
-    _player.onPlayerComplete.listen((event) {
-      setState(() {
-        isPlaying = false;  // Reset the play state when the audio finishes
-      });
+    _setupFlashcards();
+  }
+
+  void _setupFlashcards() async {
+    await _loadSettings();
+    setState(() {
+      _shuffledItems = List<Map<String, String>>.from(widget.items);
+      if (_isRandomizeFlashcards && _shuffledItems.isNotEmpty) {
+        _shuffledItems.shuffle(Random());
+      }
+      _currentIndex = (_shuffledItems.isNotEmpty && widget.initialIndex < _shuffledItems.length)
+          ? widget.initialIndex
+          : 0;
+      _updatePaletteColor();
+      if (_isAudioAutoPlay && _shuffledItems.isNotEmpty) {
+        playSound(_shuffledItems[_currentIndex]['sound']!.replaceFirst('assets/', ''));
+      }
     });
   }
 
@@ -54,10 +68,8 @@ class FlashcardPageState extends State<FlashcardPage> {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     setState(() {
       _isAudioAutoPlay = (prefs.getBool('isAudioAutoPlay') ?? false);
+      _isRandomizeFlashcards = (prefs.getBool('isRandomizeFlashcards') ?? false);
     });
-    if (_isAudioAutoPlay) {
-      playSound(widget.items[_currentIndex]['sound']!.replaceFirst('assets/', ''));
-    }
   }
 
   void playSound(String soundPath) async {
@@ -79,7 +91,8 @@ class FlashcardPageState extends State<FlashcardPage> {
   }
 
   Future<void> _updatePaletteColor() async {
-    String imagePath = widget.items[_currentIndex]['image']!;
+    if (_shuffledItems.isEmpty) return;
+    String imagePath = _shuffledItems[_currentIndex]['image']!;
     final paletteGenerator = await PaletteGenerator.fromImageProvider(
       AssetImage(imagePath),
     );
@@ -91,42 +104,57 @@ class FlashcardPageState extends State<FlashcardPage> {
   }
 
   void _showNextFlashcard() async {
+    if (_shuffledItems.isEmpty) return;
     await _player.stop();
     setState(() {
       isPlaying = false;  // Reset the play state when moving to next flashcard
-      if (isRandomMode) {
-        _currentIndex = (List<int>.generate(widget.items.length, (index) => index)..shuffle()).first;
-      } else if (_currentIndex < widget.items.length - 1) {
+      if (_currentIndex < _shuffledItems.length - 1) {
         _currentIndex++;
+        _updatePaletteColor();
+        if (_isAudioAutoPlay) {
+          playSound(_shuffledItems[_currentIndex]['sound']!.replaceFirst('assets/', ''));
+        }
       }
-      _updatePaletteColor();
     });
-    if (_isAudioAutoPlay) {
-      playSound(widget.items[_currentIndex]['sound']!.replaceFirst('assets/', ''));
-    }
   }
 
   void _showPreviousFlashcard() async {
+    if (_shuffledItems.isEmpty) return;
     await _player.stop();
     setState(() {
       isPlaying = false;  // Reset the play state when moving to previous flashcard
-      if (isRandomMode) {
-        _currentIndex = (List<int>.generate(widget.items.length, (index) => index)..shuffle()).first;
-      } else if (_currentIndex > 0) {
+      if (_currentIndex > 0) {
         _currentIndex--;
+        _updatePaletteColor();
+        if (_isAudioAutoPlay) {
+          playSound(_shuffledItems[_currentIndex]['sound']!.replaceFirst('assets/', ''));
+        }
       }
-      _updatePaletteColor();
     });
-    if (_isAudioAutoPlay) {
-      playSound(widget.items[_currentIndex]['sound']!.replaceFirst('assets/', ''));
-    }
   }
 
   @override
   Widget build(BuildContext context) {
-    String imagePath = widget.items[_currentIndex]['image']!;
-    String soundPath = widget.items[_currentIndex]['sound']!.replaceFirst('assets/', '');
-    String itemName = widget.items[_currentIndex]['name']!;
+    if (_shuffledItems.isEmpty) {
+      return Scaffold(
+        appBar: AppBar(
+          title: Text(widget.category),
+          backgroundColor: CupertinoColors.activeBlue,  // Same color as the buttons
+          titleTextStyle: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+          iconTheme: const IconThemeData(color: Colors.white),  // Set icon color to white
+        ),
+        body: const Center(
+          child: Text(
+            "No flashcards available.",
+            style: TextStyle(fontSize: 24),
+          ),
+        ),
+      );
+    }
+
+    String imagePath = _shuffledItems[_currentIndex]['image']!;
+    String soundPath = _shuffledItems[_currentIndex]['sound']!.replaceFirst('assets/', '');
+    String itemName = _shuffledItems[_currentIndex]['name']!;
 
     return Scaffold(
       appBar: AppBar(
@@ -135,18 +163,27 @@ class FlashcardPageState extends State<FlashcardPage> {
         titleTextStyle: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
         iconTheme: const IconThemeData(color: Colors.white),  // Set icon color to white
         actions: [
-          CupertinoButton(
-            padding: const EdgeInsets.all(10.0),
-            onPressed: () {
-              setState(() {
-                isRandomMode = !isRandomMode;
-              });
-            },
-            child: Icon(
-              isRandomMode ? CupertinoIcons.shuffle_thick : CupertinoIcons.shuffle,
-              color: isRandomMode ? Colors.yellow : Colors.white,  // Change color when random mode is on
-              size: 28,
+          PopupMenuButton<String>(
+            icon: const Icon(
+              Icons.more_vert,
+              color: Colors.white,  // Make the three-dot menu icon white
             ),
+            onSelected: (String value) {
+              if (value == 'Settings') {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const SettingsPage()),
+                ).then((_) => _setupFlashcards());  // Reload settings when returning from settings page
+              }
+            },
+            itemBuilder: (BuildContext context) {
+              return {'Settings'}.map((String choice) {
+                return PopupMenuItem<String>(
+                  value: choice,
+                  child: Text(choice),
+                );
+              }).toList();
+            },
           ),
         ],
       ),
@@ -154,14 +191,10 @@ class FlashcardPageState extends State<FlashcardPage> {
         onHorizontalDragEnd: (details) {
           if (details.primaryVelocity! < 0) {
             // Swiped left, show next flashcard
-            if (_currentIndex < widget.items.length - 1 || isRandomMode) {
-              _showNextFlashcard();
-            }
+            _showNextFlashcard();
           } else if (details.primaryVelocity! > 0) {
             // Swiped right, show previous flashcard
-            if (_currentIndex > 0 || isRandomMode) {
-              _showPreviousFlashcard();
-            }
+            _showPreviousFlashcard();
           }
         },
         child: Stack(
@@ -260,7 +293,7 @@ class FlashcardPageState extends State<FlashcardPage> {
                       ),
                       Align(
                         alignment: Alignment.centerRight,
-                        child: _currentIndex < widget.items.length - 1
+                        child: _currentIndex < _shuffledItems.length - 1
                             ? CupertinoButton(
                                 padding: const EdgeInsets.all(20.0),  // Increase padding to match play button size
                                 color: CupertinoColors.activeBlue,
